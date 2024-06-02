@@ -115,10 +115,15 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    long file_size, chunk_size;
+    int file_size, chunk_size;
     char *buffer = NULL;
+    char *buffer0 = NULL;
+    char *buffer1 = NULL;
+    char *buffer2 = NULL;
+    char *buffer3 = NULL;
 
     if (rank == MANAGER) {
+
         FILE *file = fopen("ca.txt", "r");
         if (file == NULL) {
             perror("Error opening file");
@@ -131,40 +136,89 @@ int main(int argc, char *argv[]) {
         fseek(file, 0, SEEK_SET);
         chunk_size = file_size / size;
 
+        
         buffer = (char *)malloc(file_size + 1);
+
+        char *buffer0 = (char *)malloc(chunk_size + 1);
+        buffer1 = (char *)malloc(chunk_size + 1);
+        buffer2 = (char *)malloc(chunk_size + 1);
+        buffer3 = (char *)malloc(chunk_size + 1);
+
         fread(buffer, 1, file_size, file);
         buffer[file_size] = '\0';
         fclose(file);
-    }
 
-    MPI_Bcast(&chunk_size, 1, MPI_LONG, MANAGER, MPI_COMM_WORLD);
+        int num_chunks=4;    
 
-    char *local_chunk = (char *)malloc(chunk_size + 1); //es subdata
-    MPI_Scatter(buffer, chunk_size, MPI_CHAR, local_chunk, chunk_size, MPI_CHAR, MANAGER, MPI_COMM_WORLD);
-    local_chunk[chunk_size] = '\0';
+        // Ajustar los tamaños de los chunks para no cortar palabras
+        int start = 0;
+        int end = chunk_size;
+        int flag=0;
 
-    if(rank==MANAGER){
-        printf("Soy master\n");
-        //Haz print de su respectivo chunk aqui 
-        printf("Chunk del proceso %d:\n%s\n", rank, local_chunk);
-    }else if(rank==1){
-        printf("Soy slave1\n");
-        //Haz print de su respectivo chunk aqui
-        printf("Chunk del proceso %d:\n%s\n", rank, local_chunk);
-    }else if(rank==2){
-        printf("Soy slave2\n");
-        //Haz print de su respectivo chunk aqui
-        printf("Chunk del proceso %d:\n%s\n", rank, local_chunk);   
-    }else if(rank==3){
-        printf("Soy slave3\n");
-        //Haz print de su respectivo chunk aqui
-        printf("Chunk del proceso %d:\n%s\n", rank, local_chunk);
+        for (int i = 0; i < num_chunks; i++) {
+            // Si no es el último chunk
+            if (i != num_chunks - 1) {
+                // Mientras que el final del chunk actual no sea un espacio en blanco
+                while (!isspace(buffer[end]) && end < file_size)
+                    end++;
+            }
+            
+            if(flag==0){
+                strncpy(buffer0, buffer + start, end - start);
+                buffer0[end - start] = '\0';
+            }else if(flag==1){
+                strncpy(buffer1, buffer + start, end - start);
+                buffer1[end - start] = '\0';
+            }else if(flag==2){
+                strncpy(buffer2, buffer + start, end - start);
+                buffer2[end - start] = '\0';
+            }else if(flag==3){
+                strncpy(buffer3, buffer + start, end - start);
+                buffer3[end - start] = '\0';
+            }
+            flag++;
+            // Actualizar el inicio y el final del siguiente chunk
+            start = end;
+            end += chunk_size;
+            // Ajustar el final si supera el tamaño del archivo
+            if (end > file_size)
+                end = file_size;
+        }
+
+        int lengths[4] = {strlen(buffer0), strlen(buffer1), strlen(buffer2), strlen(buffer3)}; 
+
 
         
+        MPI_Send(&lengths[0], 1, MPI_INT, 1, 0, MPI_COMM_WORLD);
+        MPI_Send(buffer0, lengths[0], MPI_CHAR, 1, 0, MPI_COMM_WORLD);
+
+        MPI_Send(&lengths[1], 1, MPI_INT, 2, 0, MPI_COMM_WORLD);
+        MPI_Send(buffer1, lengths[1], MPI_CHAR, 2, 0, MPI_COMM_WORLD);
+
+        MPI_Send(&lengths[2], 1, MPI_INT, 3, 0, MPI_COMM_WORLD);
+
+        MPI_Send(buffer2, lengths[2], MPI_CHAR, 3, 0, MPI_COMM_WORLD);
+
+       printf("Chunk del proceso %d:\n%s\n", MANAGER, buffer3);
+
+
+
+    }else {
+        int recv_length;
+        MPI_Recv(&recv_length, 1, MPI_INT, MANAGER, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        char *local_chunk = (char *)malloc(recv_length + 1);
+        local_chunk[recv_length] = '\0';
+        MPI_Recv(local_chunk, recv_length, MPI_CHAR, MANAGER, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        printf("Chunk del proceso %d:\n%s\n", rank, local_chunk);
+        free(local_chunk);
     }
-    free(local_chunk);
-     if (rank == MANAGER) {
+
+     if (rank == 0) {
         free(buffer);
+        free(buffer0);
+        free(buffer1);
+        free(buffer2);
+        free(buffer3);
     }
 
 
