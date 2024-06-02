@@ -84,8 +84,6 @@ void freeList(Node *head) {
     }
 }
 
-
-
 /* void readBuffer(Node **head, char *buffer, int length) {
     char *word = (char *)malloc((length + 1) * sizeof(char)); // Buffer dinámico
     int i = 0;
@@ -219,11 +217,10 @@ int main(int argc, char *argv[]) {
 
         readBuffer(&head3,local_chunk);
         printf("Hola soy esclavo 3\n");
-        readBuffer(&head3,local_chunk);
         writeFile(head3, "slave_3.txt");
 
 
-        //printf("Chunk del proceso %d:\n%s\n", rank, local_chunk);
+        printf("Chunk del proceso %d:\n%s\n", rank, local_chunk);
 
         freeList(head3);
         
