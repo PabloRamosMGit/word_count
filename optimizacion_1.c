@@ -156,7 +156,23 @@ int main(int argc, char *argv[]) {
     MPI_Scatterv(buffer, lengths, displs, MPI_CHAR, local_chunk, recv_length, MPI_CHAR, MANAGER, MPI_COMM_WORLD);
     local_chunk[recv_length] = '\0';
 
-    printf("Chunk del proceso %d:\n%s\n", rank, local_chunk);
+
+    if(rank==0){
+        printf("Hola soy master trabajando\n");
+        printf("Chunk del proceso %d:\n%s\n", rank, local_chunk);
+    }else if(rank==1){
+        printf("Hola soy esclavo 1\n");
+        printf("Chunk del proceso %d:\n%s\n", rank, local_chunk);
+
+    }else if(rank==2){
+        printf("Hola soy esclavo 2\n");
+        printf("Chunk del proceso %d:\n%s\n", rank, local_chunk);
+        
+    }else if(rank==3){
+        printf("Hola soy esclavo 3\n");
+        printf("Chunk del proceso %d:\n%s\n", rank, local_chunk);
+        
+    }
 
     free(buffer);
     free(local_chunk);
