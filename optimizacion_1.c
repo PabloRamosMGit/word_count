@@ -52,21 +52,7 @@ void addWord(Node **head, char *word) {
     }
 }
 
-// Función para leer palabras de un archivo y almacenarlas en la lista
-void readFile(Node **head, const char *filename) {
-    FILE *file = fopen(filename, "r");
-    if (file == NULL) {
-        perror("Error opening file");
-        exit(EXIT_FAILURE);
-    }
 
-    char word[256];
-    while (fscanf(file, "%255s", word) != EOF) {
-        addWord(head, word);
-    }
-
-    fclose(file);
-}
 
 // Función para escribir la lista de palabras y sus conteos en un archivo
 void writeFile(Node *head, const char *filename) {
@@ -95,6 +81,44 @@ void freeList(Node *head) {
         free(current->word);
         free(current);
         current = nextNode;
+    }
+}
+
+
+
+/* void readBuffer(Node **head, char *buffer, int length) {
+    char *word = (char *)malloc((length + 1) * sizeof(char)); // Buffer dinámico
+    int i = 0;
+    int j = 0;
+
+    while (i < length) {
+        if (isspace(buffer[i]) || ispunct(buffer[i])) {
+            if (j > 0) {
+                word[j] = '\0';
+                addWord(head, word);
+                j = 0;
+            }
+        } else {
+            word[j++] = buffer[i];
+        }
+        i++;
+    }
+
+    if (j > 0) {
+        word[j] = '\0';
+        addWord(head, word);
+    }
+
+    free(word); // Liberar la memoria del buffer dinámico
+} */
+
+
+void readBuffer(Node **head, const char *buffer) {
+    const char *delimiter = " \t\n"; // Delimitadores para palabras
+    char *word = strtok(strdup(buffer), delimiter); // Duplicar buffer para evitar modificarlo
+    while (word != NULL) {
+        addWord(head, word);
+        word = strtok(NULL, delimiter);
     }
 }
 
@@ -159,18 +183,49 @@ int main(int argc, char *argv[]) {
 
     if(rank==0){
         printf("Hola soy master trabajando\n");
-        printf("Chunk del proceso %d:\n%s\n", rank, local_chunk);
+        Node *head0 = NULL;
+        
+        readBuffer(&head0,local_chunk);
+        writeFile(head0, "master.txt");
+
+        //printf("Chunk del proceso %d:\n%s\n", rank, local_chunk);
+        freeList(head0);
+
     }else if(rank==1){
+        Node *head1 = NULL;
+
         printf("Hola soy esclavo 1\n");
-        printf("Chunk del proceso %d:\n%s\n", rank, local_chunk);
+
+        readBuffer(&head1,local_chunk);
+
+        writeFile(head1, "slave_1.txt");
+
+       // printf("Chunk del proceso %d:\n%s\n", rank, local_chunk);
+        freeList(head1);
 
     }else if(rank==2){
+        Node *head2 = NULL;
+
         printf("Hola soy esclavo 2\n");
-        printf("Chunk del proceso %d:\n%s\n", rank, local_chunk);
+        readBuffer(&head2,local_chunk);
+        //printf("Chunk del proceso %d:\n%s\n", rank, local_chunk);
+        writeFile(head2, "slave_2.txt");
+
+        freeList(head2);
+
         
     }else if(rank==3){
+        Node *head3 = NULL;
+
+        readBuffer(&head3,local_chunk);
         printf("Hola soy esclavo 3\n");
-        printf("Chunk del proceso %d:\n%s\n", rank, local_chunk);
+        readBuffer(&head3,local_chunk);
+        writeFile(head3, "slave_3.txt");
+
+
+        //printf("Chunk del proceso %d:\n%s\n", rank, local_chunk);
+
+        freeList(head3);
         
     }
 
